@@ -92,10 +92,11 @@ uint8_t TERM_findMatchingCMDs(char * currInput, uint8_t length, char ** buff, Te
     return commandsFound;
 }
 
-uint8_t TERM_findLastArg(TERMINAL_HANDLE * handle, char * buff, uint8_t * lenBuff){
+uint8_t TERM_findLastArg(TERMINAL_HANDLE * handle, char * buff, uint8_t * lenBuff, uint8_t buffSize){
     uint8_t currPos = 0;
     unsigned quoteMark = 0;
     char * lastSpace = 0;
+
     for(;currPos<handle->currBufferLength; currPos++){
         switch(handle->inputBuffer[currPos]){
             case ' ':
@@ -111,15 +112,37 @@ uint8_t TERM_findLastArg(TERMINAL_HANDLE * handle, char * buff, uint8_t * lenBuf
                     quoteMark = 1;
                     lastSpace = &handle->inputBuffer[currPos];
                 }
-                        
                 break;
             default:
                 break;
         }
     }
     
+    // Handle case where no space/quote was found
+    if(lastSpace == 0){
+        lastSpace = handle->inputBuffer - 1;  // Points before buffer start
+    }
+
+    // Validate pointer arithmetic
+    if(lastSpace < handle->inputBuffer){
+        *lenBuff = handle->currBufferLength;
+        // Bounds check before copy
+        uint8_t copyLen = (*lenBuff < buffSize - 1) ? *lenBuff : (buffSize - 1);
+        memcpy(buff, handle->inputBuffer, copyLen);
+        buff[copyLen] = 0;  // Null terminate
+        return 0;
+    }
+
     *lenBuff = handle->currBufferLength - (lastSpace - handle->inputBuffer) - 1;
-    memcpy(buff, lastSpace + 1, *lenBuff + 1);
+
+    // Bounds check before memcpy
+    if(*lenBuff >= buffSize){
+        *lenBuff = buffSize - 1;  // Truncate to fit
+    }
+
+    memcpy(buff, lastSpace + 1, *lenBuff);
+    buff[*lenBuff] = 0;  // Null terminate
+
     return (lastSpace - handle->inputBuffer) + ((*lastSpace == '"') ? 0 : 1);
 }
 
@@ -174,7 +197,7 @@ uint8_t ACL_defaultCompleter(TERMINAL_HANDLE * handle, void * params){
     char * buff = pvPortMalloc(128);
     uint8_t len;
     memset(buff, 0, 128);
-    handle->autocompleteStart = TERM_findLastArg(handle, buff, &len);
+    handle->autocompleteStart = TERM_findLastArg(handle, buff, &len, 128);
     
     //TODO use a reasonable size here
     handle->autocompleteBuffer = pvPortMalloc(list->elementCount * sizeof(char *));

@@ -300,7 +300,12 @@ uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * ha
 						}
 						handle->currEscSeqPos = 0xff;
 					}else{
-						handle->escSeqBuff[handle->currEscSeqPos++] = data[currPos];
+					    if(handle->currEscSeqPos < TTERM_ESC_SEQ_BUFFER_SIZE - 1){
+					        handle->escSeqBuff[handle->currEscSeqPos++] = data[currPos];
+					    }else{
+					        // Buffer full - reset escape sequence parsing
+					        handle->currEscSeqPos = 0xff;
+					    }
 					}
 				}
 			}else{
@@ -423,7 +428,7 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
 
             if(handle->inputBuffer[handle->currBufferPosition] != 0){      //check if we are at the end of our command
                 //we are somewhere in the middle -> move back existing characters
-                strsft(handle->inputBuffer, handle->currBufferPosition - 1, -1);
+            	strsft(handle->inputBuffer, handle->currBufferPosition - 1, -1, TERM_INPUTBUFFER_SIZE);
                 ttprintfEcho("\x08");   
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE_END, 0);
                 ttprintfEcho("%s", &handle->inputBuffer[handle->currBufferPosition - 1]);
@@ -573,10 +578,13 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
         case 32 ... 126:
             TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST);
 
-			//TODO check for string length overflow
+        	// Check bounds BEFORE writing
+            if(handle->currBufferLength >= TERM_INPUTBUFFER_SIZE - 2){
+                break;  // Buffer full, reject input
+            }
 
-			if(handle->inputBuffer[handle->currBufferPosition] != 0 && handle->currBufferLength < TERM_INPUTBUFFER_SIZE -2){      //check if we are at the end of our command
-				strsft(handle->inputBuffer, handle->currBufferPosition, 1);
+            if(handle->inputBuffer[handle->currBufferPosition] != 0){
+            	strsft(handle->inputBuffer, handle->currBufferPosition, 1, TERM_INPUTBUFFER_SIZE);
 				handle->inputBuffer[handle->currBufferPosition] = c;
 				TERM_sendVT100Code(handle, _VT100_ERASE_LINE_END, 0);
 				ttprintfEcho("%s", &handle->inputBuffer[handle->currBufferPosition]);
@@ -584,22 +592,12 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
 				handle->currBufferLength ++;
 				handle->currBufferPosition ++;
 			}else{
-
-				//we are at the end -> just delete the current one
-				handle->inputBuffer[handle->currBufferPosition++] = c;
-				handle->inputBuffer[handle->currBufferPosition] = 0;
-				handle->currBufferLength ++;
-				if(handle->currBufferPosition < TERM_INPUTBUFFER_SIZE -1){
-					ttprintfEcho("%c", c);
-				}
-			}
-
-
-			if(handle->currBufferPosition > TERM_INPUTBUFFER_SIZE -2){
-				handle->currBufferPosition = TERM_INPUTBUFFER_SIZE -2;
-			}
-			if(handle->currBufferLength > TERM_INPUTBUFFER_SIZE -2){
-				handle->currBufferLength = TERM_INPUTBUFFER_SIZE -2;
+		        handle->inputBuffer[handle->currBufferPosition++] = c;
+		        handle->inputBuffer[handle->currBufferPosition] = 0;
+		        handle->currBufferLength ++;
+		        if(handle->currBufferPosition < TERM_INPUTBUFFER_SIZE -1){
+		            ttprintfEcho("%c", c);
+		        }
 			}
 
             break;
@@ -644,13 +642,21 @@ char * strnchr(char * str, char c, uint32_t length){
     return NULL;
 }
 
-void strsft(char * src, int32_t startByte, int32_t offset){
+void strsft(char * src, int32_t startByte, int32_t offset, uint32_t bufferSize){
     if(offset == 0) return;
     
+    // Get the current string length
+    uint32_t srcLen = strlen(src);
+
     if(offset > 0){     //shift forward
-        uint32_t currPos = strlen(src) + offset;
+        // Check if we have enough space in the buffer
+        if(srcLen + offset >= bufferSize) {
+            return;  // Not enough space, abort operation
+        }
+
+        uint32_t currPos = srcLen + offset;
         src[currPos--] = 0;
-        for(; currPos >= startByte; currPos--){
+        for(; currPos >= (uint32_t)startByte; currPos--){
             if(currPos == 0){
                 src[currPos] = ' ';
                 break;
@@ -659,11 +665,19 @@ void strsft(char * src, int32_t startByte, int32_t offset){
         }
         return;
     }else{              //shift backward
+        // Bounds check for backward shift
+        int32_t absOffset = -offset;
+        if(startByte < absOffset) {
+            return;  // Invalid operation
+        }
+
         uint32_t currPos = startByte;
-        for(; src[currPos - offset] != 0; currPos++){
+        for(; src[currPos - offset] != 0 && currPos < bufferSize - 1; currPos++){
             src[currPos] = src[currPos - offset];
         }
-        src[currPos] = src[currPos - offset];
+        if(currPos < bufferSize) {
+            src[currPos] = src[currPos - offset];
+        }
         return;
     }
 }

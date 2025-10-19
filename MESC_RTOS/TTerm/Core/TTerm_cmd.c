@@ -105,7 +105,7 @@ uint8_t TERM_testCommandAutoCompleter(TERMINAL_HANDLE * handle, void * params){
     char * buff = pvPortMalloc(128);
     uint8_t len;
     memset(buff, 0, 128);
-    handle->autocompleteStart = TERM_findLastArg(handle, buff, &len);
+    handle->autocompleteStart = TERM_findLastArg(handle, buff, &len, 128);
     
     //TODO use a reasonable size here
     handle->autocompleteBuffer = pvPortMalloc(list->elementCount * sizeof(char *));

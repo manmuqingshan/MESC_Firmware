@@ -286,7 +286,7 @@ uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * ha
 unsigned isACIILetter(char c);
 uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle);
 char * strnchr(char * str, char c, uint32_t length);
-void strsft(char * src, int32_t startByte, int32_t offset);
+void strsft(char * src, int32_t startByte, int32_t offset, uint32_t bufferSize);
 void TERM_printBootMessage(TERMINAL_HANDLE * handle);
 void TERM_freeCommandList(TermCommandDescriptor ** cl, uint16_t length);
 uint8_t TERM_buildCMDList();
@@ -307,7 +307,7 @@ void TERM_killProgramm(TERMINAL_HANDLE * handle);
 uint8_t TERM_doAutoComplete(TERMINAL_HANDLE * handle);
 uint8_t TERM_findMatchingCMDs(char * currInput, uint8_t length, char ** buff, TermCommandDescriptor * cmdListHead);
 TermCommandDescriptor * TERM_findCMD(TERMINAL_HANDLE * handle);
-uint8_t TERM_findLastArg(TERMINAL_HANDLE * handle, char * buff, uint8_t * lenBuff);
+uint8_t TERM_findLastArg(TERMINAL_HANDLE * handle, char * buff, uint8_t * lenBuff, uint8_t buffSize);
 BaseType_t ptr_is_in_ram(void* ptr);
 uint8_t TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode);
 void TERM_LIST_add(TermCommandDescriptor * item, TermCommandDescriptor * head);
