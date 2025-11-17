@@ -9,8 +9,8 @@
 #define INC_BSM24_H_
 //Pick a motor for default
 #define BSM_AXIAL//Q4120_700KV//Q3513_700KV//MCMASTER_70KV_8080//QS165//CA120//
-#define PWM_FREQUENCY 20000
-#define CUSTOM_DEADTIME 600 //ns, MAX 1500ns! implementation in MESCInit().
+#define PWM_FREQUENCY 12000
+#define CUSTOM_DEADTIME 450 //ns, MAX 1500ns! implementation in MESCInit().
 
 #define SHUNT_POLARITY -1.0f
 
@@ -18,7 +18,7 @@
 #define ABS_MAX_BUS_VOLTAGE 110.0f
 #define ABS_MIN_BUS_VOLTAGE 40.0f
 #define R_SHUNT 1.0f
-#define OPGAIN 1.65f/750.0f //750A dual split 6.5mm gap, hall sensors
+#define OPGAIN 1.65f/1350.0f //750A dual split 6.5mm gap, hall sensors
 
 #define R_VBUS_BOTTOM 6200.0f //Phase and Vbus voltage sensors
 #define R_VBUS_TOP 300000.0f
